@@ -19,6 +19,7 @@ class Revendedora(Base):
     data_cadastro = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
     plano = Column(String, default=PlanType.BASIC.value)
+    telegram_token = Column(String, unique=True, nullable=True) # Token para Deep Linking (Vínculo Mágico)
 
     # Relacionamentos
     wallets = relationship("RevendedoraWallet", back_populates="revendedora")

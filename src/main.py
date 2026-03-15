@@ -3,10 +3,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.core.config import settings
 from src.api.v1.endpoints import payments # Importar o router de pagamentos
 
+from contextlib import asynccontextmanager
+from src.db.session import check_database_connection
+
+from src.db.init_db import init_tables
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Verificar conexão com Turso
+    db_ok = await check_database_connection()
+    if db_ok:
+        # Inicializar tabelas de forma assíncrona
+        await init_tables()
+    else:
+        print("⚠️ ALERTA: Não foi possível conectar ao Turso. Verifique as credenciais.")
+    yield
+    # Shutdown: (opcional) fechar conexões
+    pass
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    description="Plataforma SaaS para revendedoras de cosméticos com automação via WhatsApp."
+    description="Plataforma SaaS para revendedoras de cosméticos com IA via Telegram.",
+    lifespan=lifespan
 )
 
 # Configuração de CORS
@@ -28,9 +47,10 @@ async def root():
     }
 
 # Incluir os routers
-from src.api.v1.endpoints import payments, whatsapp, agents, admin
+from src.api.v1.endpoints import payments, whatsapp, agents, admin, telegram
 
 app.include_router(payments.router, prefix=f"{settings.API_V1_STR}/payments", tags=["Pagamentos"])
 app.include_router(whatsapp.router, prefix=f"{settings.API_V1_STR}/whatsapp", tags=["WhatsApp"])
 app.include_router(agents.router, prefix=f"{settings.API_V1_STR}/agents", tags=["Agentes"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["Super Admin"])
+app.include_router(telegram.router, prefix=f"{settings.API_V1_STR}/telegram", tags=["Telegram"])

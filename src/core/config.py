@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/bellazap"
+    TURSO_DATABASE_URL: str = "libsql://bellazap-eliezer.turso.io"
+    TURSO_AUTH_TOKEN: str = "SUA_AUTH_TOKEN_AQUI"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -33,6 +35,7 @@ class Settings(BaseSettings):
 
     # Asaas
     ASAAS_API_KEY: str = "SUA_API_KEY_ASAAS_AQUI"
+    ASAAS_WEBHOOK_TOKEN: str = "TOKEN_DE_SEGURANCA_WEBHOOK"
     ASAAS_ENV: str = "sandbox" # ou "production"
 
     # Abacate Pay
@@ -49,6 +52,10 @@ class Settings(BaseSettings):
     LLM_STRATEGY: str = "local" # 'local' ou 'cloud'
     LOCAL_LLM_MODEL: str = "qwen2.5:3b"
     CLOUD_LLM_MODEL: str = "gpt-4-turbo-preview"
+
+    # Telegram
+    TELEGRAM_BOT_TOKEN: str = "SEU_TOKEN_AQUI"
+    TELEGRAM_WEBHOOK_SECRET: str = "segredo_webhook_telegram" # Para validar webhooks
 
     model_config = SettingsConfigDict(
         env_file=".env",
