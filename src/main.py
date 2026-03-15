@@ -47,10 +47,8 @@ async def root():
     }
 
 # Incluir os routers
-from src.api.v1.endpoints import payments, whatsapp, agents, admin, telegram
+from src.api.v1.endpoints import payments, admin, telegram
 
 app.include_router(payments.router, prefix=f"{settings.API_V1_STR}/payments", tags=["Pagamentos"])
-app.include_router(whatsapp.router, prefix=f"{settings.API_V1_STR}/whatsapp", tags=["WhatsApp"])
-app.include_router(agents.router, prefix=f"{settings.API_V1_STR}/agents", tags=["Agentes"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["Super Admin"])
 app.include_router(telegram.router, prefix=f"{settings.API_V1_STR}/telegram", tags=["Telegram"])

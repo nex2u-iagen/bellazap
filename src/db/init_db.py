@@ -111,6 +111,16 @@ async def init_tables():
             );
         """)
 
+        # Tabela de Configurações Globais do Sistema
+        await client.execute("""
+            CREATE TABLE IF NOT EXISTS configs (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                category TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
         logger.info("✅ Tabelas inicializadas com sucesso no Turso.")
     except Exception as e:
         logger.error(f"❌ Erro ao inicializar tabelas: {str(e)}")

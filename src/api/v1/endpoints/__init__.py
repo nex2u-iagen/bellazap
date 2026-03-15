@@ -1,1 +1,1 @@
-from . import payments, whatsapp, agents, admin, telegram
+from . import payments, admin, telegram

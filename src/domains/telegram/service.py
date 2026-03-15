@@ -8,10 +8,26 @@ logger = logging.getLogger(__name__)
 class TelegramService:
     def __init__(self):
         self.token = settings.TELEGRAM_BOT_TOKEN
+        self.bot = None
+
+    async def _ensure_bot(self):
+        if self.bot:
+            return
+        
+        # YOLO: Tentar pegar do banco primeiro
+        try:
+            from src.db.session import client as db_client
+            res = await db_client.execute("SELECT value FROM configs WHERE key = 'telegram_bot_token'")
+            if res.rows:
+                self.token = res.rows[0][0]
+        except:
+            pass
+            
         self.bot = Bot(token=self.token)
 
     async def send_message(self, chat_id: int, text: str, reply_markup=None):
         """Envia uma mensagem de texto simples ou com botões."""
+        await self._ensure_bot()
         try:
             await self.bot.send_message(
                 chat_id=chat_id,

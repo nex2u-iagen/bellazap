@@ -5,7 +5,7 @@ import {
     Stack, Icon, Accordion, AccordionItem, AccordionButton,
     AccordionPanel, AccordionIcon, HStack, Progress, Skeleton
 } from '@chakra-ui/react';
-import { FileText, Server, Zap, Database, HelpCircle, RefreshCcw, Activity } from 'lucide-react';
+import { FileText, Server, Zap, Database, HelpCircle, RefreshCcw, Activity, MessageSquare } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = "http://localhost:8000/api/v1";
@@ -62,42 +62,31 @@ function HelpAccordion({ topic }: { topic: string }) {
 
 export default function AdminSettings() {
     const [activeTab, setActiveTab] = useState("help");
-    const [configs, setConfigs] = useState<any[] | null>(null);
-    const [loadingConfigs, setLoadingConfigs] = useState(true);
-    const [loadingAction, setLoadingAction] = useState(false);
+    const [configs, setConfigs] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const toast = useToast();
 
-    const loadConfigs = async () => {
-        setLoadingConfigs(true);
-        try {
-            const { data } = await axios.get(`${API_BASE}/admin/configs`);
-            setConfigs(data);
-        } catch (e) {
-            toast({ title: "Erro ao carregar configurações", status: "error" });
-            setConfigs([]);
-        } finally {
-            setLoadingConfigs(false);
-        }
-    };
-
-    useEffect(() => { loadConfigs() }, []);
+    useEffect(() => {
+        axios.get(`${API_BASE}/admin/configs`)
+            .then(res => setConfigs(res.data))
+            .catch(() => toast({ title: "Erro ao carregar configurações", status: "error" }))
+            .finally(() => setLoading(false));
+    }, []);
 
     const updateConfig = (key: string, value: string, category: string) => {
         axios.post(`${API_BASE}/admin/configs`, { key, value, category })
             .then(() => {
-                toast({ title: "Salvo", status: "success", duration: 1500 });
-                if (configs) {
-                    const newConfigs = [...configs];
-                    const index = newConfigs.findIndex(c => c.key === key);
-                    if (index > -1) newConfigs[index].value = value;
-                    else newConfigs.push({ key, value, category });
-                    setConfigs(newConfigs);
-                }
+                toast({ title: "Salvo com sucesso!", status: "success", duration: 1500 });
+                let newConfigs = [...configs];
+                let idx = newConfigs.findIndex(c => c.key === key);
+                if (idx > -1) newConfigs[idx].value = value;
+                else newConfigs.push({ key, value, category });
+                setConfigs(newConfigs);
             })
             .catch(() => toast({ title: "Erro ao salvar", status: "error" }));
     };
-    
-    const getConfig = (key: string) => configs?.find(c => c.key === key)?.value || "";
+
+    const getConfig = (key: string) => configs.find(c => c.key === key)?.value || "";
 
     const GlassCard = ({ children, ...props }: any) => (
         <Box bg="white" borderRadius="2xl" shadow="sm" border="1px solid" borderColor="gray.100" p={6} {...props}>
@@ -106,35 +95,100 @@ export default function AdminSettings() {
     );
 
     const renderForms = () => {
-        if (loadingConfigs) return <Stack><Skeleton h="150px" borderRadius="2xl"/><Skeleton h="80px" borderRadius="2xl"/></Stack>;
-        
+        if (loading) return <Skeleton h="300px" borderRadius="2xl" />;
         return (
             <>
                 {activeTab === "infra" && (
                     <Stack spacing={6}>
                         <GlassCard>
-                            <Heading size="sm" mb={6}>Manual LLM Fallback</Heading>
-                            <Stack spacing={4}>
-                                <FormControl><FormLabel>Provedor</FormLabel><Select value={getConfig('fallback_provider')} onChange={(e) => updateConfig('fallback_provider', e.target.value, 'llm')}><option value="openai">OpenAI</option><option value="google">Google (Gemini Pro)</option><option value="groq">Groq (Llama-3)</option></Select></FormControl>
-                                <FormControl><FormLabel>Modelo</FormLabel><Input placeholder="Ex: gemini-pro" defaultValue={getConfig('fallback_model')} onBlur={(e) => updateConfig('fallback_model', e.target.value, 'llm')} /></FormControl>
-                                <FormControl><FormLabel>API Key</FormLabel><Input type="password" defaultValue={getConfig('fallback_key')} onBlur={(e) => updateConfig('fallback_key', e.target.value, 'llm')} /></FormControl>
-                            </Stack>
+                            <Heading size="sm" mb={6}>Configuração de LLM e Infraestrutura</Heading>
+                            <Text color="gray.600" mb={4}>
+                                As chaves de API (OpenAI, Groq, Gemini) agora são gerenciadas via variáveis de ambiente (.env) para maior segurança nativa na arquitetura Serverless (Vercel Edge).
+                            </Text>
+                            <Text fontSize="sm" color="gray.500">
+                                Certifique-se de configurar <code>OPENAI_API_KEY</code> e <code>TURSO_DATABASE_URL</code> no ambiente de implantação.
+                            </Text>
                         </GlassCard>
-                        <HelpAccordion topic="llm" />
                     </Stack>
                 )}
 
-                {activeTab === "evo" && (
+                {activeTab === "asaas" && (
                     <Stack spacing={6}>
-                        <GlassCard>
-                            <Heading size="sm" mb={6}>Evolution API</Heading>
-                            <VStack spacing={4} align="start">
-                                <FormControl><FormLabel>URL base</FormLabel><Input placeholder="https://..." defaultValue={getConfig('evo_url')} onBlur={(e) => updateConfig('evo_url', e.target.value, 'evolution')} /></FormControl>
-                                <FormControl><FormLabel>API Key</FormLabel><Input type="password" defaultValue={getConfig('evo_key')} onBlur={(e) => updateConfig('evo_key', e.target.value, 'evolution')} /></FormControl>
-                                <Button colorScheme="green" leftIcon={<RefreshCcw size={18} />} onClick={() => { setLoadingAction(true); axios.post(`${API_BASE}/admin/infra/evo/test`).then(res => { toast({ title: res.data.message, status: res.data.status === 'success' ? 'success' : 'error' }); setLoadingAction(false); }).catch(() => setLoadingAction(false)) }} isLoading={loadingAction}>Testar Conexão</Button>
-                            </VStack>
+                        <GlassCard borderTop="4px solid" borderColor="pink.500">
+                            <Heading size="sm" mb={4}>Integração Asaas (Conta Master)</Heading>
+                            <Text fontSize="sm" color="gray.600" mb={6}>
+                                Configure sua chave API do Asaas e a Carteira (Wallet ID) principal. Essa conta receberá a taxa administrativa de todos os pagamentos da plataforma através do sistema de Split.
+                            </Text>
+                            
+                            <Stack spacing={4}>
+                                <FormControl>
+                                    <FormLabel>Asaas API Key ($a_...)</FormLabel>
+                                    <Input 
+                                        type="password" 
+                                        defaultValue={getConfig('asaas_api_key')}
+                                        onBlur={(e) => updateConfig('asaas_api_key', e.target.value, 'asaas')}
+                                        placeholder="Sua chave de API de Produção ou Sandbox" 
+                                    />
+                                </FormControl>
+                                <FormControl>
+                                    <FormLabel>Wallet ID Recebedor (Master)</FormLabel>
+                                    <Input 
+                                        defaultValue={getConfig('asaas_wallet_id')}
+                                        onBlur={(e) => updateConfig('asaas_wallet_id', e.target.value, 'asaas')}
+                                        placeholder="Ex: c7132a26-..." 
+                                    />
+                                    <Text fontSize="xs" color="gray.500" mt={1}>Você encontra sua Wallet ID nas configurações de 'Split de Pagamento' ou via API do Asaas.</Text>
+                                </FormControl>
+                                <FormControl>
+                                    <FormLabel>Ambiente</FormLabel>
+                                    <Select 
+                                        value={getConfig('asaas_env') || "sandbox"}
+                                        onChange={(e) => updateConfig('asaas_env', e.target.value, 'asaas')}
+                                    >
+                                        <option value="sandbox">Sandbox (Teste)</option>
+                                        <option value="production">Produção</option>
+                                    </Select>
+                                </FormControl>
+                            </Stack>
                         </GlassCard>
-                        <HelpAccordion topic="evolution" />
+                    </Stack>
+                )}
+
+                {activeTab === "telegram" && (
+                    <Stack spacing={6}>
+                        <GlassCard borderTop="4px solid" borderColor="blue.500">
+                            <Heading size="sm" mb={4}>Configuração do Bot Telegram</Heading>
+                            <Text fontSize="sm" color="gray.600" mb={6}>
+                                Informe o Token do seu Bot gerado pelo @BotFather. Este bot será o canal de atendimento oficial da BellaZap.
+                            </Text>
+                            
+                            <Stack spacing={4}>
+                                <FormControl>
+                                    <FormLabel>Telegram Bot Token</FormLabel>
+                                    <Input 
+                                        type="password" 
+                                        defaultValue={getConfig('telegram_bot_token')}
+                                        onBlur={(e) => updateConfig('telegram_bot_token', e.target.value, 'telegram')}
+                                        placeholder="Ex: 123456:ABC-DEF..." 
+                                    />
+                                </FormControl>
+                                <FormControl>
+                                    <FormLabel>Webhook Secret (Segurança)</FormLabel>
+                                    <Input 
+                                        defaultValue={getConfig('telegram_webhook_secret')}
+                                        onBlur={(e) => updateConfig('telegram_webhook_secret', e.target.value, 'telegram')}
+                                        placeholder="Um segredo aleatório para seu webhook" 
+                                    />
+                                    <Text fontSize="xs" color="gray.500" mt={1}>Este segredo é usado para garantir que apenas o Telegram envie mensagens para o seu backend.</Text>
+                                </FormControl>
+                                <Box p={4} bg="blue.50" borderRadius="xl">
+                                    <Text fontSize="xs" fontWeight="bold" color="blue.700">Dica:</Text>
+                                    <Text fontSize="xs" color="blue.600">
+                                        Após trocar o token, lembre-se de atualizar a URL do Webhook no Telegram (ou via API) apontando para <code>sua-url.com/api/v1/telegram/webhook</code>.
+                                    </Text>
+                                </Box>
+                            </Stack>
+                        </GlassCard>
                     </Stack>
                 )}
 
@@ -143,8 +197,9 @@ export default function AdminSettings() {
                         <Heading size="md" mb={4}>Central de Orientações</Heading>
                         <Text color="gray.600" mb={6}>Guias práticos para gestão da plataforma.</Text>
                         <Accordion allowMultiple>
-                            <StaticHelpAccordion title="Configuração WhatsApp" content={<Text>A Evolution API conecta a BellaZap ao seu número. Use a aba correspondente para salvar suas credenciais.</Text>}/>
-                            <StaticHelpAccordion title="Pagamentos Asaas" content={<Text>A integração financeira é processada via Asaas. O split é configurado automaticamente no cadastro.</Text>}/>
+                            <StaticHelpAccordion title="Configuração Telegram" content={<Text>A integração com a cliente final ocorre via Telegram Bot. As revendedoras usam o comando /start com o email cadastrado para vincular a conta.</Text>}/>
+                            <StaticHelpAccordion title="Split de Pagamentos Asaas" content={<Text>A conta Master recebe sua parte usando a Wallet ID configurada na aba Asaas. Cada representante deve ter sua conta Asaas ou Chave Pix para receber a parte dela.</Text>}/>
+                            <StaticHelpAccordion title="Banco de Dados Turso" content={<Text>Os dados estão seguros no Turso (LibSQL). A visualização de tabelas e logs ocorre diretamente pelas ferramentas de CLI do Turso.</Text>}/>
                         </Accordion>
                     </GlassCard>
                 )}
@@ -158,8 +213,9 @@ export default function AdminSettings() {
             <Grid templateColumns={{ base: "1fr", md: "250px 1fr" }} gap={8}>
                 <VStack align="start" spacing={2}>
                     <Button variant={activeTab === "help" ? "solid" : "ghost"} colorScheme="pink" w="full" justifyContent="start" leftIcon={<FileText size={18} />} onClick={() => setActiveTab("help")}>Central de Ajuda</Button>
-                    <Button variant={activeTab === "infra" ? "solid" : "ghost"} colorScheme="pink" w="full" justifyContent="start" leftIcon={<Server size={18} />} onClick={() => setActiveTab("infra")}>Fallback & LLM</Button>
-                    <Button variant={activeTab === "evo" ? "solid" : "ghost"} colorScheme="pink" w="full" justifyContent="start" leftIcon={<Zap size={18} />} onClick={() => setActiveTab("evo")}>Evolution API</Button>
+                    <Button variant={activeTab === "telegram" ? "solid" : "ghost"} colorScheme="pink" w="full" justifyContent="start" leftIcon={<MessageSquare size={18} />} onClick={() => setActiveTab("telegram")}>Bot Telegram</Button>
+                    <Button variant={activeTab === "asaas" ? "solid" : "ghost"} colorScheme="pink" w="full" justifyContent="start" leftIcon={<Zap size={18} />} onClick={() => setActiveTab("asaas")}>Integração Asaas</Button>
+                    <Button variant={activeTab === "infra" ? "solid" : "ghost"} colorScheme="pink" w="full" justifyContent="start" leftIcon={<Server size={18} />} onClick={() => setActiveTab("infra")}>Infra & Segurança</Button>
                 </VStack>
                 <Box>{renderForms()}</Box>
             </Grid>

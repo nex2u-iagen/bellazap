@@ -24,11 +24,8 @@ import Login from './features/auth/Login'
 import AdminLogin from './features/auth/AdminLogin'
 
 import AdminRevendedoras from './features/admin/AdminRevendedoras'
-import AdminLLMManager from './features/admin/AdminLLMManager'
-import AdminDBExplorer from './features/admin/AdminDBExplorer'
 import AdminSettings from './features/admin/AdminSettings'
 import AdminAnalytics from './features/admin/AdminAnalytics'
-import AdminAgents from './features/admin/AdminAgents'
 import GlassCard from './components/common/GlassCard'
 
 const API_BASE = "http://localhost:8000/api/v1"
@@ -72,6 +69,23 @@ function ProductUpload() {
 // --- Views ---
 
 function Dashboard() {
+    const [stats, setStats] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchRepStats = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/admin/rep/stats`)
+                setStats(res.data)
+            } catch (e) {
+                console.error(e)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchRepStats()
+    }, [])
+
     return (
         <Container maxW="container.xl" py={8}>
             <Stack spacing={8}>
@@ -82,32 +96,57 @@ function Dashboard() {
                         <Badge colorScheme="green" variant="subtle" px={3} py={1} borderRadius="full">Online</Badge>
                     </HStack>
                 </Flex>
-                <Grid templateColumns={{ base: "repeat(1, 1fr)", md: "repeat(3, 1fr)" }} gap={6}>
-                    <GridItem><GlassCard><Stat><StatLabel color="gray.500" textTransform="uppercase" fontSize="xs">Saldo Disponível</StatLabel><StatNumber fontSize="3xl" color="pink.500">R$ 1.250,00</StatNumber><StatHelpText>Split ativo (8%)</StatHelpText></Stat></GlassCard></GridItem>
-                    <GridItem><GlassCard><Stat><StatLabel color="gray.500" textTransform="uppercase" fontSize="xs">Vendas do Mês</StatLabel><StatNumber fontSize="3xl">32 / 100</StatNumber><StatHelpText>Plano Bella Pro</StatHelpText></Stat></GlassCard></GridItem>
-                    <GridItem><Box p={6} bg="orange.400" color="white" borderRadius="2xl" shadow="xl"><Stat><StatLabel opacity={0.8} textTransform="uppercase" fontSize="xs">Lançamento</StatLabel><StatNumber fontSize="2xl">Natura Una Gold</StatNumber><StatHelpText opacity={0.8}>Disponível 24/02</StatHelpText></Stat></Box></GridItem>
-                </Grid>
                 
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
-                    <GlassCard>
-                        <Heading size="md" mb={4}>Próximos Passos</Heading>
-                        <VStack align="stretch" spacing={4}>
-                            <HStack p={4} bg="gray.50" borderRadius="xl" cursor="pointer" transition="0.2s" _hover={{bg: "pink.50"}}>
-                                <Icon as={Plus} color="pink.500" />
-                                <Box><Text fontWeight="bold">Tire uma foto do pedido</Text><Text fontSize="xs" color="gray.500">A Bella extrai os produtos automaticamente.</Text></Box>
-                            </HStack>
-                            <HStack p={4} bg="gray.50" borderRadius="xl" cursor="pointer" transition="0.2s" _hover={{bg: "blue.50"}}>
-                                <Icon as={Users} color="blue.500" />
-                                <Box><Text fontWeight="bold">Cadastre novos clientes</Text><Text fontSize="xs" color="gray.500">Mantenha sua base de contatos organizada.</Text></Box>
-                            </HStack>
-                        </VStack>
-                    </GlassCard>
-                    <GlassCard>
-                        <Heading size="md" mb={4}>Performance Semanal</Heading>
-                        <Box h="150px" bg="gray.50" borderRadius="xl" display="flex" alignItems="center" justifyContent="center">
-                            <Text color="gray.400" fontSize="sm">Gráfico de desempenho indisponível no momento.</Text>
-                        </Box>
-                    </GlassCard>
+                {loading ? <Skeleton height="200px" borderRadius="2xl" /> : (
+                    <Grid templateColumns={{ base: "repeat(1, 1fr)", md: "repeat(3, 1fr)" }} gap={6}>
+                        <GridItem><GlassCard><Stat><StatLabel color="gray.500" textTransform="uppercase" fontSize="xs">Saldo Disponível</StatLabel><StatNumber fontSize="3xl" color="pink.500">R$ {stats?.saldo?.toLocaleString('pt-BR') || "0,00"}</StatNumber><StatHelpText>Split ativo</StatHelpText></Stat></GlassCard></GridItem>
+                        <GridItem><GlassCard><Stat><StatLabel color="gray.500" textTransform="uppercase" fontSize="xs">Vendas do Mês</StatLabel><StatNumber fontSize="3xl">{stats?.vendas || 0}</StatNumber><StatHelpText>Plano: {stats?.plano || 'Nenhum'}</StatHelpText></Stat></GlassCard></GridItem>
+                        <GridItem><Box p={6} bg="orange.400" color="white" borderRadius="2xl" shadow="xl"><Stat><StatLabel opacity={0.8} textTransform="uppercase" fontSize="xs">Lançamento</StatLabel><StatNumber fontSize="2xl">{stats?.lancamento || 'Novidades'}</StatNumber><StatHelpText opacity={0.8}>Disponível em breve</StatHelpText></Stat></Box></GridItem>
+                    </Grid>
+                )}
+                
+                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
+                    <GridItem colSpan={{ base: 1, md: 2 }}>
+                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
+                            <GlassCard>
+                                <Heading size="md" mb={4}>Próximos Passos</Heading>
+                                <VStack align="stretch" spacing={4}>
+                                    <HStack p={4} bg="gray.50" borderRadius="xl" cursor="pointer" transition="0.2s" _hover={{bg: "pink.50"}}>
+                                        <Icon as={Plus} color="pink.500" />
+                                        <Box><Text fontWeight="bold">Tire uma foto do pedido</Text><Text fontSize="xs" color="gray.500">A Bella extrai os produtos automaticamente.</Text></Box>
+                                    </HStack>
+                                    <HStack p={4} bg="gray.50" borderRadius="xl" cursor="pointer" transition="0.2s" _hover={{bg: "blue.50"}}>
+                                        <Icon as={Users} color="blue.500" />
+                                        <Box><Text fontWeight="bold">Cadastre novos clientes</Text><Text fontSize="xs" color="gray.500">Mantenha sua base de contatos organizada.</Text></Box>
+                                    </HStack>
+                                </VStack>
+                            </GlassCard>
+                            <GlassCard>
+                                <Heading size="md" mb={4}>Performance Semanal</Heading>
+                                <Box h="150px" bg="gray.50" borderRadius="xl" display="flex" alignItems="center" justifyContent="center">
+                                    <Text color="gray.400" fontSize="sm">A inteligência está coletando seus dados... ✨</Text>
+                                </Box>
+                            </GlassCard>
+                        </SimpleGrid>
+                    </GridItem>
+                    
+                    <GridItem>
+                        <GlassCard bgGradient="linear(to-br, pink.50, white)" border="1px solid" borderColor="pink.100">
+                            <Icon as={MessageSquare} w={8} h={8} color="pink.500" mb={4} />
+                            <Heading size="md" mb={2}>Sua Assistente IA</Heading>
+                            <Text fontSize="sm" color="gray.600" mb={6}>A BellaZap funciona 100% pelo Telegram. Conecte sua conta para começar a vender.</Text>
+                            
+                            <VStack align="stretch" spacing={3}>
+                                <Button as="a" href="https://t.me/bellazap_bot" target="_blank" colorScheme="telegram" leftIcon={<MessageSquare size={18} />}>
+                                    Abrir Telegram
+                                </Button>
+                                <Box p={3} bg="white" borderRadius="lg" border="1px dashed" borderColor="gray.300">
+                                    <Text fontSize="xs" color="gray.500" mb={1} textAlign="center">Digite no chat da bot:</Text>
+                                    <Text fontWeight="bold" fontSize="sm" textAlign="center" color="pink.600">/start seu@email.com</Text>
+                                </Box>
+                            </VStack>
+                        </GlassCard>
+                    </GridItem>
                 </SimpleGrid>
             </Stack>
         </Container>
@@ -162,9 +201,6 @@ function AdminBackstage() {
             <HStack spacing={6} mb={8} borderBottom="1px solid" borderColor="gray.100" pb={4} overflowX="auto">
                 <Button variant="link" color={activeTab === 'dashboard' ? 'pink.500' : 'gray.500'} onClick={() => setActiveTab('dashboard')} leftIcon={<LayoutDashboard size={18}/>}>Dashboard</Button>
                 <Button variant="link" color={activeTab === 'representantes' ? 'pink.500' : 'gray.500'} onClick={() => setActiveTab('representantes')} leftIcon={<Users size={18}/>}>Representantes</Button>
-                <Button variant="link" color={activeTab === 'ia' ? 'pink.500' : 'gray.500'} onClick={() => setActiveTab('ia')} leftIcon={<Cpu size={18}/>}>Agentes IA</Button>
-                <Button variant="link" color={activeTab === 'infra' ? 'pink.500' : 'gray.500'} onClick={() => setActiveTab('infra')} leftIcon={<Server size={18}/>}>Infra & LLM</Button>
-                <Button variant="link" color={activeTab === 'db' ? 'pink.500' : 'gray.500'} onClick={() => setActiveTab('db')} leftIcon={<Database size={18}/>}>Explorador BD</Button>
                 <Button variant="link" color={activeTab === 'settings' ? 'pink.500' : 'gray.500'} onClick={() => setActiveTab('settings')} leftIcon={<Settings size={18}/>}>Ajustes</Button>
             </HStack>
 
@@ -179,52 +215,82 @@ function AdminBackstage() {
             )}
 
             {activeTab === 'representantes' && <AdminRevendedoras />}
-            {activeTab === 'ia' && <AdminAgents />}
-            {activeTab === 'infra' && <AdminLLMManager />}
-            {activeTab === 'db' && <AdminDBExplorer />}
             {activeTab === 'settings' && <AdminSettings />}
         </Container>
     )
 }
 
 function App() {
-    const [isAuthenticated, setIsAuthenticated] = useState(false)
-    const [isAdmin, setIsAdmin] = useState(false)
-    const navigate = useNavigate(); const location = useLocation()
+    const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('isAuthenticated') === 'true')
+    const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('isAdmin') === 'true')
+    const navigate = useNavigate(); 
+    const location = useLocation()
     const isAdminPath = location.pathname.startsWith('/backstage')
+
+    useEffect(() => {
+        localStorage.setItem('isAuthenticated', String(isAuthenticated))
+        localStorage.setItem('isAdmin', String(isAdmin))
+    }, [isAuthenticated, isAdmin])
+
+    const handleLogout = () => {
+        setIsAuthenticated(false)
+        setIsAdmin(false)
+        localStorage.removeItem('isAuthenticated')
+        localStorage.removeItem('isAdmin')
+        navigate('/')
+    }
 
     if (!isAuthenticated && !isAdminPath) return <Login onLogin={() => { setIsAuthenticated(true); navigate('/'); }} />
     if (isAdminPath && !isAdmin) return <AdminLogin onLogin={() => { setIsAdmin(true); setIsAuthenticated(true); navigate('/backstage'); }} />
 
+    const isCurrentRepView = location.pathname === '/'
+
     return (
         <Box minH="100vh" bg="gray.50">
-            <Flex as="nav" bg={isAdmin ? "gray.900" : "white"} color={isAdmin ? "white" : "inherit"} height="80px" px={8} position="sticky" top={0} zIndex={100} shadow="sm" justify="space-between" align="center">
+            <Flex as="nav" bg={isAdmin && !isCurrentRepView ? "gray.900" : "white"} color={isAdmin && !isCurrentRepView ? "white" : "inherit"} height="80px" px={8} position="sticky" top={0} zIndex={100} shadow="sm" justify="space-between" align="center">
                 <Stack direction="row" align="center" spacing={2} cursor="pointer" onClick={() => navigate('/')}>
                     <Icon as={Sparkles} color="pink.500" w={6} h={6} />
                     <Heading size="md" fontWeight="800">BellaZap</Heading>
                     {isAdmin && <Badge colorScheme="red" ml={2}>ADMIN</Badge>}
                 </Stack>
+                
                 <Stack direction="row" spacing={8} display={{ base: "none", md: "flex" }}>
-                    {!isAdmin ? (
+                    {!isAdmin || isCurrentRepView ? (
                         <>
                             <Button as={Link} to="/" variant="link" color="pink.500" leftIcon={<LayoutDashboard size={18} />}>Dashboard</Button>
                             <Button variant="link" color="gray.500" leftIcon={<ShoppingBag size={18} />}>Produtos</Button>
                             <Button variant="link" color="gray.500" leftIcon={<Wallet size={18} />}>Finanças</Button>
                         </>
-                    ) : (
+                    ) : null}
+
+                    {isAdmin && !isCurrentRepView ? (
                         <>
                             <Button as={Link} to="/backstage" variant="link" color="white" leftIcon={<ShieldCheck size={18} />}>Central de Comando</Button>
                         </>
-                    )}
+                    ) : null}
                 </Stack>
-                <Menu>
-                    <MenuButton>
-                        <Avatar size="sm" name={isAdmin ? "Super Admin" : "Bella User"} bg={isAdmin ? "red.600" : "pink.500"} />
-                    </MenuButton>
-                    <MenuList color="gray.800">
-                        <MenuItem icon={<LogOut size={16} />} onClick={() => { setIsAuthenticated(false); setIsAdmin(false); navigate('/'); }}>Sair</MenuItem>
-                    </MenuList>
-                </Menu>
+
+                <HStack spacing={4}>
+                    {isAdmin && (
+                        <Button 
+                            colorScheme={isCurrentRepView ? "red" : "pink"} 
+                            variant="outline" 
+                            size="sm" 
+                            leftIcon={isCurrentRepView ? <ShieldCheck size={16} /> : <Eye size={16} />}
+                            onClick={() => navigate(isCurrentRepView ? '/backstage' : '/')}
+                        >
+                            {isCurrentRepView ? "Ir para Admin" : "Ver como Representante"}
+                        </Button>
+                    )}
+                    <Menu>
+                        <MenuButton>
+                            <Avatar size="sm" name={isAdmin ? "Super Admin" : "Bella User"} bg={isAdmin ? "red.600" : "pink.500"} />
+                        </MenuButton>
+                        <MenuList color="gray.800">
+                            <MenuItem icon={<LogOut size={16} />} onClick={handleLogout}>Sair</MenuItem>
+                        </MenuList>
+                    </Menu>
+                </HStack>
             </Flex>
             <Box as="main">
                 <Routes>

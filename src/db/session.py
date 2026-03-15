@@ -6,10 +6,27 @@ logger = logging.getLogger(__name__)
 
 # Criar cliente Turso (LibSQL)
 # Suporta conexões HTTP (Edge) e WebSocket
-client = libsql_client.create_client(
-    url=settings.TURSO_DATABASE_URL,
-    auth_token=settings.TURSO_AUTH_TOKEN
-)
+_client_instance = None
+
+class LazyClient:
+    def __getattr__(self, name):
+        global _client_instance
+        if _client_instance is None:
+            import asyncio
+            # Ensure an event loop exists before creating the client
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # If there's truly no loop yet, it's safer to wait, but uvicorn should have one
+                pass
+            
+            _client_instance = libsql_client.create_client(
+                url=settings.TURSO_DATABASE_URL,
+                auth_token=settings.TURSO_AUTH_TOKEN
+            )
+        return getattr(_client_instance, name)
+        
+client = LazyClient()
 
 async def check_database_connection():
     """

@@ -16,7 +16,16 @@ async def telegram_webhook(
     x_telegram_bot_api_secret_token: str = Header(None)
 ):
     """Handler para o webhook do Telegram (Serverless Ready)."""
-    if settings.TELEGRAM_WEBHOOK_SECRET and x_telegram_bot_api_secret_token != settings.TELEGRAM_WEBHOOK_SECRET:
+    # YOLO: Tentar pegar segredo do banco
+    secret = settings.TELEGRAM_WEBHOOK_SECRET
+    try:
+        res_secret = await db_client.execute("SELECT value FROM configs WHERE key = 'telegram_webhook_secret'")
+        if res_secret.rows:
+            secret = res_secret.rows[0][0]
+    except:
+        pass
+
+    if secret and x_telegram_bot_api_secret_token != secret:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
@@ -62,8 +71,12 @@ async def telegram_webhook(
 
 @router.get("/status")
 async def telegram_status():
-    return {"bot_configured": settings.TELEGRAM_BOT_TOKEN != "SEU_TOKEN_AQUI"}
-
-@router.get("/status")
-async def telegram_status():
-    return {"bot_configured": settings.TELEGRAM_BOT_TOKEN != "SEU_TOKEN_AQUI"}
+    token = settings.TELEGRAM_BOT_TOKEN
+    try:
+        res = await db_client.execute("SELECT value FROM configs WHERE key = 'telegram_bot_token'")
+        if res.rows:
+            token = res.rows[0][0]
+    except:
+        pass
+    
+    return {"bot_configured": token != "SEU_TOKEN_AQUI" and token != ""}

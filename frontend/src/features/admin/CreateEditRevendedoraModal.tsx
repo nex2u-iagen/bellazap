@@ -16,7 +16,8 @@ export default function CreateEditRevendedoraModal({ isOpen, onClose, onSaved }:
         email: '', 
         cpf_cnpj: '', 
         telefone: '', 
-        plano: 'basic' 
+        plano: 'basic',
+        asaas_access_token: ''
     });
     const toast = useToast();
 
@@ -27,7 +28,8 @@ export default function CreateEditRevendedoraModal({ isOpen, onClose, onSaved }:
                 email: '', 
                 cpf_cnpj: '', 
                 telefone: '', 
-                plano: 'basic' 
+                plano: 'basic',
+                asaas_access_token: ''
             });
         }
     }, [isOpen]);
@@ -104,6 +106,14 @@ export default function CreateEditRevendedoraModal({ isOpen, onClose, onSaved }:
                                 <option value="pro">Bella Pro (R$ 99,90)</option>
                                 <option value="enterprise">Bella Enterprise (Custom)</option>
                             </Select>
+                        </FormControl>
+                        <FormControl>
+                            <FormLabel>Wallet ID Asaas / Link de Pagamento (Split)</FormLabel>
+                            <Input 
+                                placeholder="Carteira Asaas ou Link para repasse"
+                                value={formData.asaas_access_token} 
+                                onChange={(e) => setFormData({ ...formData, asaas_access_token: e.target.value })} 
+                            />
                         </FormControl>
                     </Stack>
                 </ModalBody>

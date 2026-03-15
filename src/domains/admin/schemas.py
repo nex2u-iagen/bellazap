@@ -32,8 +32,10 @@ class RevendedoraBase(BaseModel):
 
 class RevendedoraCreate(RevendedoraBase):
     telegram_id: Optional[str] = None
+    asaas_access_token: Optional[str] = None
 
 class RevendedoraResponse(RevendedoraBase):
     id: str
     created_at: Optional[str] = None
     telegram_id: Optional[str] = None
+    asaas_access_token: Optional[str] = None

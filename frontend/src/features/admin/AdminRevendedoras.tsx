@@ -88,7 +88,7 @@ export default function AdminRevendedoras() {
                         <Thead>
                             <Tr>
                                 <Th>Representante</Th>
-                                <Th>WhatsApp</Th>
+                                <Th>Telegram</Th>
                                 <Th>Plano</Th>
                                 <Th>Status</Th>
                                 <Th>Ações</Th>
@@ -163,8 +163,8 @@ export default function AdminRevendedoras() {
                             <VStack align="stretch" spacing={6}>
                                 <SimpleGrid columns={2} spacing={4}>
                                     <Box p={4} bg="pink.50" borderRadius="xl">
-                                        <Text fontSize="xs" color="pink.600" textTransform="uppercase">Status WhatsApp</Text>
-                                        <Text fontWeight="bold">{summary.revendedora.whatsapp_status || "Desconectado"}</Text>
+                                        <Text fontSize="xs" color="pink.600" textTransform="uppercase">Status Telegram</Text>
+                                        <Text fontWeight="bold">{summary.revendedora.telegram_status || "Desconectado"}</Text>
                                     </Box>
                                     <Box p={4} bg="blue.50" borderRadius="xl">
                                         <Text fontSize="xs" color="blue.600" textTransform="uppercase">Interações IA</Text>
