@@ -1,0 +1,4 @@
+api: python run.py
+worker: celery -A src.workers.reconciliation_worker worker --loglevel=info --pool=solo
+frontend: npm run dev --prefix frontend
+# llm: ollama serve

@@ -1,0 +1,98 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.12, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\marke\PythonScripts\BellaZap\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\marke\PythonScripts\BellaZap
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/test_workers.py::test_reconcile_payments_task PASSED               [ 33%]
+tests/test_workers.py::test_retry_failed_webhooks_task FAILED            [ 66%]
+tests/test_workers.py::test_retry_failed_webhooks_max_attempts PASSED    [100%]
+
+================================== FAILURES ===================================
+_______________________ test_retry_failed_webhooks_task _______________________
+
+mock_notification_service_class = <MagicMock name='NotificationService' spec='NotificationService' id='2054394945488'>
+mock_payment_service_class = <function PaymentService at 0x000001DE5396E8E0>
+mock_payment_repo_class = <MagicMock name='PaymentRepository' spec='PaymentRepository' id='2054396931312'>
+mock_async_session_local = <MagicMock name='AsyncSessionLocal' id='2054397248912'>
+db_session = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x000001DE537DDA90>
+mock_utcnow = <MagicMock name='datetime' id='2054394945152'>
+
+    @pytest.mark.asyncio
+    @patch('src.workers.reconciliation_worker.AsyncSessionLocal')
+    @patch('src.workers.reconciliation_worker.PaymentRepository', autospec=True)
+    @patch('src.workers.reconciliation_worker.PaymentService', autospec=True)
+    @patch('src.workers.reconciliation_worker.NotificationService', autospec=True)
+    async def test_retry_failed_webhooks_task(
+        mock_notification_service_class,
+        mock_payment_service_class,
+        mock_payment_repo_class,
+        mock_async_session_local,
+        db_session: AsyncSession,
+        mock_utcnow
+    ):
+        from src.workers.reconciliation_worker import _retry_failed_webhooks_async
+    
+        mock_session = AsyncMock(spec=AsyncSession)
+        mock_async_session_local.return_value.__aenter__.return_value = mock_session
+    
+        mock_repo = mock_payment_repo_class.return_value
+        mock_service = mock_payment_service_class.return_value
+    
+        asaas_provider = PaymentProviderModel(id=uuid.uuid4(), name="asaas")
+        mock_repo.get_provider_by_id.return_value = asaas_provider
+    
+        failed_webhook = WebhookFailure(
+            id=uuid.uuid4(),
+            provider_id=asaas_provider.id,
+            payload={"event": "payment.failed"},
+            attempts=1
+        )
+        mock_repo.get_pending_webhook_failures.return_value = [failed_webhook]
+    
+        await _retry_failed_webhooks_async()
+    
+        mock_repo.get_pending_webhook_failures.assert_called_once_with(limit=100)
+        mock_service.process_webhook.assert_called_once_with(
+            payload={"event": "payment.failed"},
+            provider_name_hint="asaas"
+        )
+>       mock_repo.resolve_webhook_failure.assert_called_once_with(failed_webhook.id)
+
+tests\test_workers.py:105: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <AsyncMock name='PaymentRepository().resolve_webhook_failure' spec='function' id='2054397089104'>
+args = (UUID('8510f902-7ea4-4656-b8cd-71a63b360bd0'),), kwargs = {}
+msg = "Expected 'resolve_webhook_failure' to be called once. Called 0 times."
+
+    def assert_called_once_with(self, /, *args, **kwargs):
+        """assert that the mock was called exactly once and that that call was
+        with the specified arguments."""
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to be called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'resolve_webhook_failure' to be called once. Called 0 times.
+
+C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\unittest\mock.py:990: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  src.workers.reconciliation_worker:reconciliation_worker.py:101 Falha ao reprocessar webhook 8510f902-7ea4-4656-b8cd-71a63b360bd0: object MagicMock can't be used in 'await' expression
+============================== warnings summary ===============================
+src\schemas\payment.py:21
+  C:\Users\marke\PythonScripts\BellaZap\src\schemas\payment.py:21: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class PaymentResponse(BaseModel):
+
+src\db\base.py:2
+  C:\Users\marke\PythonScripts\BellaZap\src\db\base.py:2: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_workers.py::test_retry_failed_webhooks_task - AssertionErro...
+=================== 1 failed, 2 passed, 2 warnings in 0.80s ===================

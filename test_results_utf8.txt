@@ -1,0 +1,181 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.12, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\marke\PythonScripts\BellaZap\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\marke\PythonScripts\BellaZap
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 3 items
+
+tests/test_payments.py::test_create_payment_success_asaas FAILED         [ 33%]
+tests/test_payments.py::test_create_payment_fallback_to_abacate FAILED   [ 66%]
+tests/test_payments.py::test_create_payment_all_providers_unhealthy FAILED [100%]
+
+================================== FAILURES ===================================
+______________________ test_create_payment_success_asaas ______________________
+
+mock_create_payment_asaas = <AsyncMock name='create_payment' id='2708831177760'>
+mock_create_split_asaas = <AsyncMock name='create_split' id='2708831178768'>
+mock_health_check_asaas = <AsyncMock name='health_check' id='2708831179440'>
+mock_health_check_abacate = <AsyncMock name='health_check' id='2708831180112'>
+client = <httpx.AsyncClient object at 0x00000276B2D9E7B0>
+test_revendedora = <src.models.core.Revendedora object at 0x00000276B2D9F230>
+setup_payment_providers = (<src.models.payment.PaymentProvider object at 0x00000276B2EB86E0>, <src.models.payment.PaymentProvider object at 0x00000276B2E34CD0>)
+db_session = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x00000276B2D9D940>
+
+    @pytest.mark.asyncio
+    @patch('src.domains.pagamentos.providers.abacate.AbacatePayProvider.health_check', new_callable=AsyncMock)
+    @patch('src.domains.pagamentos.providers.asaas.AsaasProvider.health_check', new_callable=AsyncMock)
+    @patch('src.domains.pagamentos.providers.asaas.AsaasProvider.create_split', new_callable=AsyncMock)
+    @patch('src.domains.pagamentos.providers.asaas.AsaasProvider.create_payment', new_callable=AsyncMock)
+    async def test_create_payment_success_asaas(
+        mock_create_payment_asaas, mock_create_split_asaas, mock_health_check_asaas, mock_health_check_abacate,
+        client: AsyncClient,
+        test_revendedora: Revendedora,
+        setup_payment_providers,
+        db_session: AsyncSession
+    ):
+        asaas_provider, _ = setup_payment_providers
+    
+        mock_health_check_asaas.return_value = True
+        mock_health_check_abacate.return_value = True # Ambos saudáveis, Asaas será primário
+    
+        mock_create_payment_asaas.return_value = {
+            "id": "pay_asaas_123",
+            "invoiceUrl": "http://asaas.com/invoice/123",
+            "status": "PENDING"
+        }
+        mock_create_split_asaas.return_value = {"success": True}
+    
+        payment_payload = {
+            "revendedora_id": str(test_revendedora.id),
+            "amount": 100.00,
+            "customer_data": {"name": "Cliente Teste", "email": "cliente@teste.com", "cpfCnpj": "11122233344"},
+            "split_rules": [
+                {"wallet_id": "rev_wallet_1", "value": 80.00},
+                {"wallet_id": "plat_wallet_1", "value": 20.00}
+            ]
+        }
+    
+        response = await client.post("/api/v1/payments/", json=payment_payload)
+    
+>       assert response.status_code == 201
+E       assert 404 == 201
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests\test_payments.py:72: AssertionError
+___________________ test_create_payment_fallback_to_abacate ___________________
+
+mock_create_payment_asaas = <AsyncMock name='create_payment' id='2708830019200'>
+mock_create_payment_abacate = <AsyncMock name='create_payment' id='2708831183472'>
+mock_health_check_asaas = <AsyncMock name='health_check' id='2708831186496'>
+mock_health_check_abacate = <AsyncMock name='health_check' id='2708831187168'>
+client = <httpx.AsyncClient object at 0x00000276B2E36FD0>
+test_revendedora = <src.models.core.Revendedora object at 0x00000276B2E37610>
+setup_payment_providers = (<src.models.payment.PaymentProvider object at 0x00000276B2E37B10>, <src.models.payment.PaymentProvider object at 0x00000276B2DDFA80>)
+db_session = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x00000276B2E36210>
+
+    @pytest.mark.asyncio
+    @patch('src.domains.pagamentos.providers.abacate.AbacatePayProvider.health_check', new_callable=AsyncMock)
+    @patch('src.domains.pagamentos.providers.asaas.AsaasProvider.health_check', new_callable=AsyncMock)
+    @patch('src.domains.pagamentos.providers.abacate.AbacatePayProvider.create_payment', new_callable=AsyncMock)
+    @patch('src.domains.pagamentos.providers.asaas.AsaasProvider.create_payment', new_callable=AsyncMock)
+    async def test_create_payment_fallback_to_abacate(
+        mock_create_payment_asaas, mock_create_payment_abacate, mock_health_check_asaas, mock_health_check_abacate,
+        client: AsyncClient,
+        test_revendedora: Revendedora,
+        setup_payment_providers,
+        db_session: AsyncSession
+    ):
+        _, abacate_provider = setup_payment_providers # Corrigir a desestruturação
+    
+        mock_health_check_asaas.return_value = False # Asaas unhealthy
+        mock_health_check_abacate.return_value = True # Abacate healthy
+    
+        mock_create_payment_abacate.return_value = {
+            "id": "charge_abacate_456",
+            "link": "http://abacatepay.com/charge/456",
+            "status": "WAITING_PAYMENT"
+        }
+        # Abacate Pay não tem create_split separado no exemplo, é no create_payment
+    
+        payment_payload = {
+            "revendedora_id": str(test_revendedora.id),
+            "amount": 50.00,
+            "customer_data": {"name": "Cliente Fallback", "email": "fallback@teste.com", "cpfCnpj": "99988877766"},
+            "split_rules": [
+                {"wallet_id": "rev_wallet_f", "value": 40.00},
+                {"wallet_id": "plat_wallet_f", "value": 10.00}
+            ]
+        }
+    
+        response = await client.post("/api/v1/payments/", json=payment_payload)
+    
+>       assert response.status_code == 201
+E       assert 404 == 201
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests\test_payments.py:128: AssertionError
+_________________ test_create_payment_all_providers_unhealthy _________________
+
+mock_health_check_asaas = <AsyncMock name='health_check' id='2708831187840'>
+mock_health_check_abacate = <AsyncMock name='health_check' id='2708831188512'>
+client = <httpx.AsyncClient object at 0x00000276B40F8B90>
+test_revendedora = <src.models.core.Revendedora object at 0x00000276B40F91D0>
+setup_payment_providers = (<src.models.payment.PaymentProvider object at 0x00000276B41008A0>, <src.models.payment.PaymentProvider object at 0x00000276B40F4A70>)
+db_session = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x00000276B40F8910>
+
+    @pytest.mark.asyncio
+    @patch('src.domains.pagamentos.providers.abacate.AbacatePayProvider.health_check', new_callable=AsyncMock)
+    @patch('src.domains.pagamentos.providers.asaas.AsaasProvider.health_check', new_callable=AsyncMock)
+    async def test_create_payment_all_providers_unhealthy(
+        mock_health_check_asaas, mock_health_check_abacate,
+        client: AsyncClient,
+        test_revendedora: Revendedora,
+        setup_payment_providers,
+        db_session: AsyncSession
+    ):
+        mock_health_check_asaas.return_value = False
+        mock_health_check_abacate.return_value = False
+    
+        payment_payload = {
+            "revendedora_id": str(test_revendedora.id),
+            "amount": 200.00,
+            "customer_data": {"name": "Cliente Offline", "email": "offline@teste.com", "cpfCnpj": "11122233344"},
+            "split_rules": []
+        }
+    
+        response = await client.post("/api/v1/payments/", json=payment_payload)
+    
+>       assert response.status_code == 500
+E       assert 404 == 500
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests\test_payments.py:170: AssertionError
+============================== warnings summary ===============================
+src\schemas\payment.py:21
+  C:\Users\marke\PythonScripts\BellaZap\src\schemas\payment.py:21: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class PaymentResponse(BaseModel):
+
+src\db\base.py:2
+  C:\Users\marke\PythonScripts\BellaZap\src\db\base.py:2: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+tests/test_payments.py::test_create_payment_success_asaas
+tests/test_payments.py::test_create_payment_success_asaas
+tests/test_payments.py::test_create_payment_success_asaas
+tests/test_payments.py::test_create_payment_fallback_to_abacate
+tests/test_payments.py::test_create_payment_fallback_to_abacate
+tests/test_payments.py::test_create_payment_fallback_to_abacate
+tests/test_payments.py::test_create_payment_all_providers_unhealthy
+tests/test_payments.py::test_create_payment_all_providers_unhealthy
+tests/test_payments.py::test_create_payment_all_providers_unhealthy
+  C:\Users\marke\PythonScripts\BellaZap\.venv\Lib\site-packages\sqlalchemy\sql\schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_payments.py::test_create_payment_success_asaas - assert 404...
+FAILED tests/test_payments.py::test_create_payment_fallback_to_abacate - asse...
+FAILED tests/test_payments.py::test_create_payment_all_providers_unhealthy - ...
+======================= 3 failed, 11 warnings in 0.55s ========================

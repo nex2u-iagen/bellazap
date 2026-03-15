@@ -1,0 +1,25 @@
+{
+  "repository_type": "multi-part",
+  "parts": [
+    {
+      "part_id": "backend",
+      "root_path": "C:\Users\marke\PythonScripts\BellaZap",
+      "project_type_id": "backend",
+      "display_name": "Backend"
+    },
+    {
+      "part_id": "frontend",
+      "root_path": "C:\Users\marke\PythonScripts\BellaZap\frontend",
+      "project_type_id": "web",
+      "display_name": "Web"
+    }
+  ],
+  "integration_points": [
+    {
+      "from": "frontend",
+      "to": "backend",
+      "type": "REST API",
+      "details": "Frontend makes calls to backend API endpoints."
+    }
+  ]
+}
